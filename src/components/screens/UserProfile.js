@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { UserContext } from "../../App"
 
-const Profile = ()=>{
+const UserProfile = ()=>{
     const [userProfile,setProfile] = useState(null)
     const {state,dispatch} = useContext(UserContext)
     const {userid} = useParams()
@@ -17,8 +17,61 @@ const Profile = ()=>{
         .then(result=>{
             console.log(result)
             setProfile(result)
+            
         })
     },[userid])
+
+    const followUser = ()=>{
+        fetch("/follow",{
+            method:"PUT",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({followId:userid})
+        }).then(res=>res.json())
+        .then(data=>{
+            console.log(data)
+            dispatch({type:"UPDATE",payload:{following:data.following,followers:data.followers}})
+            localStorage.setItem("user",JSON.stringify(data))
+            setProfile((prevState)=>{
+                return({
+                    ...prevState,
+                    user:{
+                        ...prevState.user,
+                        followers:[...prevState.user.followers,data._id]
+                    }
+                })
+            })
+        }).catch(err=>{
+            console.log(err)
+        })
+    }
+    const unfollowUser = ()=>{
+        fetch("/unfollow",{
+            method:"PUT",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({followId:userid})
+        }).then(res=>res.json())
+        .then(data=>{
+            console.log(data)
+            dispatch({type:"UPDATE",payload:{following:data.following,followers:data.followers}})
+            localStorage.setItem("user",JSON.stringify(data))
+            setProfile((prevState)=>{
+                return({
+                    ...prevState,
+                    user:{
+                        ...prevState.user,
+                        followers:[...prevState.user.followers.splice(prevState.user.followers.indexOf(data._id),1)]
+                    }
+                })
+            })
+            
+        }).catch(err=>{
+            console.log(err)
+        })
+    }
     return (
         <>
             {userProfile ? 
@@ -32,16 +85,23 @@ const Profile = ()=>{
                 }} className="row">
                     <div className="col s4">
                         <img 
-                        src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=160&q=80" 
+                        src={userProfile.user.pic}
                         alt="Perfil" 
                         style={{width:"160px",height:"160px",borderRadius:"80px"}}/>
                     </div>
                     <div className="col s8">
                         <h4>{userProfile.user.name}</h4>
+                        <button className="btn waves-effect waves-light blue darken-3" onClick={
+                                userProfile.user.followers.includes(state._id) ?
+                                ()=>unfollowUser()
+                                :
+                                ()=>followUser()
+                            }>{ userProfile.user.followers.includes(state._id) ? "Unfollow" : "Follow"}</button>
                         <div style={{display:"flex",justifyContent:"space-between"}}>
                             <h5>{userProfile.posts.length} posts</h5>
-                            <h5>42 followers</h5>
-                            <h5>42 following</h5>
+                            <h5>{userProfile.user.followers?.length} followers</h5>
+                            <h5>{userProfile.user.following?.length} following </h5>
+                            
                         </div>
                     </div>
                 </div>
@@ -63,4 +123,4 @@ const Profile = ()=>{
     )
 }
 
-export default Profile
+export default UserProfile
